@@ -78,11 +78,12 @@ def flow_index(X, batch_size, shuffle):
 
         current_index = (batch_index * batch_size) % n
         if n >= current_index + batch_size:
+            current_batch_size = batch_size
             batch_index += 1
         else:
+            current_batch_size = n - current_index
             batch_index = 0
-            continue
-        yield index_array[current_index: current_index + batch_size]
+        yield index_array[current_index: current_index + current_batch_size]
 
 
 def h_translate_img(img, angle, delta):
