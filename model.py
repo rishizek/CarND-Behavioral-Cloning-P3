@@ -1,14 +1,13 @@
 import argparse
 import os, csv, re
 import numpy as np
-from datetime import datetime
 from keras.models import load_model, Sequential
 from keras.layers import Dense, Dropout, Flatten, Lambda
 from keras.layers.convolutional import Convolution2D, MaxPooling2D, Cropping2D
-from keras.preprocessing.image import img_to_array, load_img, flip_axis, random_shift
+from keras.preprocessing.image import img_to_array, load_img, flip_axis
 from keras import backend as K
 import random
-
+import cv2
 
 
 def get_model(shape, load=False, checkpoint=None):
@@ -46,7 +45,7 @@ def parse_input_data(input_dir):
         for center, left, right, steering, throttle, brake, speed in reader:
             if float(speed) > 25: # only use stable drive samples
                 X += [re.sub(r'.*IMG', local_dir, center.strip()),  # to support various folder path
-                      re.sub(r'.*IMG', local_dir, left.strip()),    # remove path before IMG
+                      re.sub(r'.*IMG', local_dir, left.strip()),    # replace path/to/IMG to local_dir
                       re.sub(r'.*IMG', local_dir, right.strip())]
                 y += [float(steering),
                        float(steering) + steering_correction,
@@ -84,19 +83,32 @@ def flow_index(X, batch_size, shuffle):
         yield index_array[current_index: current_index + current_batch_size]
 
 
-def h_translate_img(img, angle, delta):
+def random_h_shift_img(img, angle):
+    """
+    Shift (translate) input image randomly with adjusted angle.
+    """
+    h_shift_range = 20.0
+    angle_range = 0.1  # angle per pixel = 0.005
+    rows, cols, _ = img.shape
+
+    dx = random.randint(-h_shift_range, h_shift_range)
+
+    trans_mat = np.float32([[1, 0, dx], [0, 1, 0]])
+    img = cv2.warpAffine(img, trans_mat, (cols, rows))
+
+    angle = angle + angle_range * dx / h_shift_range
+
     return img, angle
 
 
 def random_flip_img(img, angle):
-    """ randomly flip image with probability of 0.5. """
+    """ Randomly flip image with probability of 0.5. """
     if random.uniform(0, 1) < 0.5:
         img = flip_axis(img, 1)
         angle = -angle
     return img, angle
 
 def process_img(img_path, angle, augment):
-    delta_h = 0.0
     target_size = None #(160, 320)
     if augment and 'center' in img_path:
         #print(img_path)
@@ -105,7 +117,7 @@ def process_img(img_path, angle, augment):
     img = load_img(img_path, target_size=target_size)
     img = img_to_array(img)
     if augment:
-        img, angle = h_translate_img(img, angle, delta_h)
+        img, angle = random_h_shift_img(img, angle)
         img, angle = random_flip_img(img, angle)
     return img, angle
 
