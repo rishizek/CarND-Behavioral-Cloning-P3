@@ -6,29 +6,30 @@ from keras.models import load_model, Sequential
 from keras.layers import Dense, Dropout, Flatten
 from keras.layers.convolutional import Convolution2D, MaxPooling2D
 from keras.preprocessing.image import img_to_array, load_img, flip_axis, random_shift
+from keras import backend as K
 
 
-#from keras.models import load_model
 
 model = None
 
 
-def model(load, shape, checkpoint=None):
-    """Return a model from file or to train on."""
+def get_model(shape, load=False, checkpoint=None):
+    """return the pre-trained model from file."""
     if load and checkpoint: return load_model(checkpoint)
 
     conv_layers, dense_layers = [32, 32, 64, 128], [1024, 512]
 
     model = Sequential()
-    model.add(Convolution2D(32, 3, 3, activation='elu', input_shape=shape))
-    model.add(MaxPooling2D())
-    for cl in conv_layers:
-        model.add(Convolution2D(cl, 3, 3, activation='elu'))
-        model.add(MaxPooling2D())
-    model.add(Flatten())
-    for dl in dense_layers:
-        model.add(Dense(dl, activation='elu'))
-        model.add(Dropout(0.5))
+    model.add(Flatten(input_shape=shape))
+    # model.add(Convolution2D(32, 3, 3, activation='elu', input_shape=shape))
+    # model.add(MaxPooling2D())
+    # for cl in conv_layers:
+    #     model.add(Convolution2D(cl, 3, 3, activation='elu'))
+    #     model.add(MaxPooling2D())
+    # model.add(Flatten())
+    # for dl in dense_layers:
+    #     model.add(Dense(dl, activation='elu'))
+    #     model.add(Dropout(0.5))
     model.add(Dense(1, activation='linear'))
     model.compile(loss='mse', optimizer="adam")
     return model
@@ -40,14 +41,15 @@ def parse_input_data(input_dir):
 
     X, y = [], []
     input_file = os.path.join(input_dir, input_file)
+    local_dir = os.path.join(input_dir, 'IMG')  # path to IMG files
     with open(input_file) as csvfile:
         reader = csv.reader(csvfile)
         if is_header: next(reader, None) # if header skip first line
         for center, left, right, steering, throttle, brake, speed in reader:
             if float(speed) > 25: # only use stable drive samples
-                X += [re.sub(r'.*IMG', 'IMG', center.strip()),  # to support various folder path
-                      re.sub(r'.*IMG', 'IMG', left.strip()),    # remove path before IMG
-                      re.sub(r'.*IMG', 'IMG', right.strip())]
+                X += [re.sub(r'.*IMG', local_dir, center.strip()),  # to support various folder path
+                      re.sub(r'.*IMG', local_dir, left.strip()),    # remove path before IMG
+                      re.sub(r'.*IMG', local_dir, right.strip())]
                 y += [float(steering),
                        float(steering) + steering_offset,
                        float(steering) - steering_offset]
@@ -92,11 +94,13 @@ def flip_img(img, angle):
 
 def process_img(img_path, angle, augment):
     delta_h = 0.0
+    target_size = None #(320, 160)
     if augment and 'center' in img_path:
-        print(img_path)
+        #print(img_path)
+        pass
 
-
-    img = img_path #load_img(img_path)
+    img = load_img(img_path, target_size=target_size)
+    img = img_to_array(img)
     if augment:
         img, angle = h_translate_img(img, angle, delta_h)
         img, angle = flip_img(img, angle)
@@ -120,7 +124,7 @@ def image_data_generator(X, y, batch_size, shuffle=True, augment=True):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Learning Model')
-    parser.add_argument('--epochs', metavar='N', type=int, nargs='?', default=10,
+    parser.add_argument('--epochs', metavar='N', type=int, nargs='?', default=1,
                         help='The number of epochs.')
     parser.add_argument('--batch_size', type=int, nargs='?', default=256,
                         help='The batch size')
@@ -138,9 +142,17 @@ if __name__ == '__main__':
     (X_train, y_train), (X_valid, y_valid), (X_test, y_test) = split_data(X, y, 0.8, 0.9)
     print(X_train.shape, X_valid.shape, X_test.shape)
     #model = load_model(args.model)
+    image_shape = (160, 320, 3)
+    model = get_model(shape=image_shape)
 
-    g = image_data_generator(X_train, y_train, args.batch_size,
+
+    g_train = image_data_generator(X_train, y_train, args.batch_size,
                              shuffle=True, augment=True)
-    for i in range(10):
-        print(i, next(g))
+    g_valid = image_data_generator(X_valid, y_valid, args.batch_size,
+                             shuffle=False, augment=False)
+    model.fit_generator(g_train, samples_per_epoch=len(X_train), nb_epoch=args.epochs,
+                        validation_data=g_valid, nb_val_samples=len(X_valid))
+    model.save('model.h5')
 
+    # To avoid occasional session exception
+    K.clear_session()
