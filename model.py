@@ -42,7 +42,7 @@ def parse_input_csv_file(input_dir):
     """
     is_header = True
     input_file = 'driving_log.csv'
-    steering_correction = 0.4
+    steering_correction = 0.2
 
     X, y = [], []
     input_file = os.path.join(input_dir, input_file)
@@ -100,8 +100,8 @@ def random_h_shift_img(img, angle):
     """
     Shift (translate) input image randomly with adjusted angle.
     """
-    h_shift_range = 20.0
-    angle_range = 0.1  # angle per pixel = 0.005
+    h_shift_range = 40.0
+    angle_range = 0.2  
     rows, cols, _ = img.shape
 
     dx = random.randint(-h_shift_range, h_shift_range)
