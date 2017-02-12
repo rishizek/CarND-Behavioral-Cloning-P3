@@ -3,10 +3,11 @@ import os, csv, re
 import numpy as np
 from datetime import datetime
 from keras.models import load_model, Sequential
-from keras.layers import Dense, Dropout, Flatten
-from keras.layers.convolutional import Convolution2D, MaxPooling2D
+from keras.layers import Dense, Dropout, Flatten, Lambda
+from keras.layers.convolutional import Convolution2D, MaxPooling2D, Cropping2D
 from keras.preprocessing.image import img_to_array, load_img, flip_axis, random_shift
 from keras import backend as K
+import random
 
 
 
@@ -17,19 +18,20 @@ def get_model(shape, load=False, checkpoint=None):
     """return the pre-trained model from file."""
     if load and checkpoint: return load_model(checkpoint)
 
-    conv_layers, dense_layers = [32, 32, 64, 128], [1024, 512]
+    conv_layers, dense_layers = [32, 32, 64], [1024, 512]
 
     model = Sequential()
-    model.add(Flatten(input_shape=shape))
-    # model.add(Convolution2D(32, 3, 3, activation='elu', input_shape=shape))
-    # model.add(MaxPooling2D())
-    # for cl in conv_layers:
-    #     model.add(Convolution2D(cl, 3, 3, activation='elu'))
-    #     model.add(MaxPooling2D())
-    # model.add(Flatten())
-    # for dl in dense_layers:
-    #     model.add(Dense(dl, activation='elu'))
-    #     model.add(Dropout(0.5))
+    model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=shape)) # normalize image
+    model.add(Cropping2D(cropping=((75, 25), (0, 0)))) # crop top 75 and bottom 25 pixel from image
+    model.add(Convolution2D(32, 3, 3, activation='elu'))
+    model.add(MaxPooling2D())
+    for cl in conv_layers:
+        model.add(Convolution2D(cl, 3, 3, activation='elu'))
+        model.add(MaxPooling2D())
+    model.add(Flatten())
+    for dl in dense_layers:
+        model.add(Dense(dl, activation='elu'))
+        model.add(Dropout(0.5))
     model.add(Dense(1, activation='linear'))
     model.compile(loss='mse', optimizer="adam")
     return model
@@ -37,7 +39,7 @@ def get_model(shape, load=False, checkpoint=None):
 def parse_input_data(input_dir):
     is_header = True
     input_file = 'driving_log.csv'
-    steering_offset = 0.4
+    steering_correction = 0.4
 
     X, y = [], []
     input_file = os.path.join(input_dir, input_file)
@@ -51,8 +53,8 @@ def parse_input_data(input_dir):
                       re.sub(r'.*IMG', local_dir, left.strip()),    # remove path before IMG
                       re.sub(r'.*IMG', local_dir, right.strip())]
                 y += [float(steering),
-                       float(steering) + steering_offset,
-                       float(steering) - steering_offset]
+                       float(steering) + steering_correction,
+                       float(steering) - steering_correction]
     return np.array(X), np.array(y)
 
 def split_data(X, y, train_thres=0.8, valid_thres=0.9, n_sample=None):
@@ -90,12 +92,16 @@ def h_translate_img(img, angle, delta):
     return img, angle
 
 
-def flip_img(img, angle):
-    return img, -angle
+def random_flip_img(img, angle):
+    """ randomly flip image with probability of 0.5. """
+    if random.uniform(0, 1) < 0.5:
+        img = flip_axis(img, 1)
+        angle = -angle
+    return img, angle
 
 def process_img(img_path, angle, augment):
     delta_h = 0.0
-    target_size = None #(320, 160)
+    target_size = None #(160, 320)
     if augment and 'center' in img_path:
         #print(img_path)
         pass
@@ -104,7 +110,7 @@ def process_img(img_path, angle, augment):
     img = img_to_array(img)
     if augment:
         img, angle = h_translate_img(img, angle, delta_h)
-        img, angle = flip_img(img, angle)
+        img, angle = random_flip_img(img, angle)
     return img, angle
 
 
