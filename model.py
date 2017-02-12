@@ -11,7 +11,10 @@ import cv2
 
 
 def get_model(shape, load=False, checkpoint=None):
-    """return the pre-trained model from file."""
+    """
+    Return the model to be trained.
+    Here, Nvidia's End-to-End deep learning architecture is used.
+    """
     if load and checkpoint: return load_model(checkpoint)
 
     conv_layers1, conv_layers2 = [24, 36, 48], [64, 64]
@@ -31,7 +34,12 @@ def get_model(shape, load=False, checkpoint=None):
     model.compile(loss='mse', optimizer="adam")
     return model
 
-def parse_input_data(input_dir):
+
+def parse_input_csv_file(input_dir):
+    """
+    Load the input csv file and gather center, left, and right image pathes in long-format.
+    Also, add the correction angle to left and right steering angles.
+    """
     is_header = True
     input_file = 'driving_log.csv'
     steering_correction = 0.4
@@ -52,9 +60,11 @@ def parse_input_data(input_dir):
                        float(steering) - steering_correction]
     return np.array(X), np.array(y)
 
-def split_data(X, y, train_thres=0.8, valid_thres=0.9, n_sample=None):
-    """split input data to training, validation and test set"""
 
+def split_data(X, y, train_thres=0.8, valid_thres=0.9, n_sample=None):
+    """
+    Split input data to training, validation and test set.
+    """
     if not n_sample:
         n_sample = len(X)
     X_train, y_train = X[:int(n_sample*train_thres)], y[:int(n_sample*train_thres)]
@@ -65,6 +75,9 @@ def split_data(X, y, train_thres=0.8, valid_thres=0.9, n_sample=None):
 
 
 def flow_index(X, batch_size, shuffle):
+    """
+    Select indices for each batch.
+    """
     batch_index = 0
     n = len(X)
     while 1:
@@ -102,17 +115,20 @@ def random_h_shift_img(img, angle):
 
 
 def random_flip_img(img, angle):
-    """ Randomly flip image with probability of 0.5. """
+    """
+    Randomly flip image with probability of 0.5.
+    """
     if random.uniform(0, 1) < 0.5:
         img = flip_axis(img, 1)
         angle = -angle
     return img, angle
 
+
 def process_img(img_path, angle, augment):
+    """
+    Load images, and then generate additional data when augment=True.
+    """
     target_size = None #(160, 320)
-    if augment and 'center' in img_path:
-        #print(img_path)
-        pass
 
     img = load_img(img_path, target_size=target_size)
     img = img_to_array(img)
@@ -123,6 +139,10 @@ def process_img(img_path, angle, augment):
 
 
 def image_data_generator(X, y, batch_size, shuffle=True, augment=True):
+    """
+    Generator to train model. When augment=True, the augmented images with adjusted angles
+    are returned.
+    """
     index_generator = flow_index(X, batch_size, shuffle)
 
     while 1:
@@ -151,18 +171,21 @@ if __name__ == '__main__':
     print("epochs = {}, batch_size = {}".format(args.epochs, args.batch_size))
     print("data_folder:", args.data_folder)
 
-    X, y = parse_input_data(args.data_folder)
-    print(X.shape, y.shape)
-    # split data to training, validation and test set (80%, 10%, 10%, respectively)
-    (X_train, y_train), (X_valid, y_valid), (X_test, y_test) = split_data(X, y, 0.8, 0.9)
-    print(X_train.shape, X_valid.shape, X_test.shape)
-    #model = load_model(args.model)
-    image_shape = (160, 320, 3)
-    model = get_model(shape=image_shape)
+    X, y = parse_input_csv_file(args.data_folder)
+    print("The number of total images:", X.shape[0])
+    # split data to training, validation and test set (80%, 20%, 0%, respectively)
+    (X_train, y_train), (X_valid, y_valid), (X_test, y_test) = split_data(X, y, 0.8, 1.0)
+    print("The number of training images:", len(X_train))
+    print("The number of validation images:", len(X_valid))
+    print("The number of test images:", len(X_test)) # we don't use test image
 
+    input_image_shape = (160, 320, 3)
+    model = get_model(shape=input_image_shape)
 
+    # generator for training set
     g_train = image_data_generator(X_train, y_train, args.batch_size,
                              shuffle=True, augment=True)
+    # generator for validation set
     g_valid = image_data_generator(X_valid, y_valid, args.batch_size,
                              shuffle=False, augment=False)
     model.fit_generator(g_train, samples_per_epoch=len(X_train), nb_epoch=args.epochs,
