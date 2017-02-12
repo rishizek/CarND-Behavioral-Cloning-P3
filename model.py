@@ -11,27 +11,23 @@ import random
 
 
 
-model = None
-
-
 def get_model(shape, load=False, checkpoint=None):
     """return the pre-trained model from file."""
     if load and checkpoint: return load_model(checkpoint)
 
-    conv_layers, dense_layers = [32, 32, 64], [1024, 512]
+    conv_layers1, conv_layers2 = [24, 36, 48], [64, 64]
+    dense_layers = [100, 50, 10]
 
     model = Sequential()
     model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=shape)) # normalize image
-    model.add(Cropping2D(cropping=((75, 25), (0, 0)))) # crop top 75 and bottom 25 pixel from image
-    model.add(Convolution2D(32, 3, 3, activation='elu'))
-    model.add(MaxPooling2D())
-    for cl in conv_layers:
-        model.add(Convolution2D(cl, 3, 3, activation='elu'))
-        model.add(MaxPooling2D())
+    model.add(Cropping2D(cropping=((70, 25), (0, 0)))) # crop top 70 and bottom 25 pixel from image
+    for cl in conv_layers1:
+        model.add(Convolution2D(cl, 5, 5, subsample=(2, 2), activation='relu'))
+    for cl in conv_layers2:
+        model.add(Convolution2D(cl, 3, 3, activation='relu'))
     model.add(Flatten())
     for dl in dense_layers:
-        model.add(Dense(dl, activation='elu'))
-        model.add(Dropout(0.5))
+        model.add(Dense(dl))
     model.add(Dense(1, activation='linear'))
     model.compile(loss='mse', optimizer="adam")
     return model
