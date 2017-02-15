@@ -3,3 +3,5 @@ simulator
 .idea
 checkpoints
 run1
+.DS_Store
+__pycache__
