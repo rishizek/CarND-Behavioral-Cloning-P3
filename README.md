@@ -219,6 +219,7 @@ angle. This improve not only model accuracy
 but computing speed significantly. 
 
 The sample of cropped image is following:
+
 ![alt text][image9]
 
 The original data set are split to the training data 
