@@ -1,4 +1,4 @@
-#**Behavioral Cloning** 
+# **Behavioral Cloning** 
 
 ---
 **Behavrioal Cloning Project**
@@ -24,12 +24,12 @@ The goals / steps of this project are the following:
 [image9]: ./examples/center_2017_01_30_23_21_22_330_crop.jpg "Cropped Image"
 
 ## Rubric Points
-###Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  
+### Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  
 
 ---
-###Files Submitted & Code Quality
+### Files Submitted & Code Quality
 
-####1. Submission includes all required files and can be used to run the simulator in autonomous mode
+#### 1. Submission includes all required files and can be used to run the simulator in autonomous mode
 
 My project includes the following files:
 * model.py containing the script to create and train the model
@@ -37,19 +37,19 @@ My project includes the following files:
 * model.h5 containing a trained convolution neural network 
 * writeup_report.md or writeup_report.pdf summarizing the results
 
-####2. Submssion includes functional code
+#### 2. Submssion includes functional code
 Using the Udacity provided simulator and my drive.py file, the car can be driven autonomously around the track by executing 
 ```sh
 python drive.py model.h5
 ```
 
-####3. Submssion code is usable and readable
+#### 3. Submssion code is usable and readable
 
 The model.py file contains the code for training and saving the convolution neural network. The file shows the pipeline I used for training and validating the model, and it contains comments to explain how the code works.
 
-###Model Architecture and Training Strategy
+### Model Architecture and Training Strategy
 
-####1. An appropriate model arcthiecture has been employed
+#### 1. An appropriate model arcthiecture has been employed
 
 My model consists of a convolution neural network with 5x5 filter sizes (subsample 2)
 and depths between 24 and 48 (model.py lines 20, 26-27), and also with
@@ -60,7 +60,7 @@ the data is normalized in the model using a Keras lambda layer (model.py line 24
 and cropped unimportant parts (top 70 pixels and bottom 25 pixels) using a Keras
 Cropping2D layer (model.py line 25).
 
-####2. Attempts to reduce overfitting in the model
+#### 2. Attempts to reduce overfitting in the model
 
 The model was trained and validated on different data sets to ensure that the model 
 was not overfitting (model.py lines 64-74). The model was tested by running it through 
@@ -73,7 +73,7 @@ corrections, and the order of the training data set are shuffled (model.py lines
 77-96).
 
 
-####3. Model parameter tuning
+#### 3. Model parameter tuning
 
 The model used an adam optimizer, so the learning rate was not tuned manually 
 (model.py line 25).
@@ -84,7 +84,7 @@ angle range (model.py lines 103-104). Those parameters were manually turned
 by testing the driving stability on the simulator.
 
 
-####4. Appropriate training data
+#### 4. Appropriate training data
 
 Training data was chosen to keep the vehicle driving on the road. 
 I used three types of images: center lane driving, left lane driving
@@ -96,9 +96,9 @@ center of lane.
 
 For details about how I created the training data, see the next section. 
 
-###Model Architecture and Training Strategy
+### Model Architecture and Training Strategy
 
-####1. Solution Design Approach
+#### 1. Solution Design Approach
 
 The overall strategy for deriving a model architecture was inspired by 
 [Nvidia's End-to-End Learning for Self-Driving article
@@ -141,7 +141,7 @@ After that, I further fine-tuned maximal horizontal shift range and angle range
 parameters several times with the simulator, and the driving became more stabilized.
  
 
-####2. Final Model Architecture
+#### 2. Final Model Architecture
 
 The final model architecture (model.py lines 20-34) ends up being almost like
 the Nvidia's convolution neural network although the input image size is differ.
@@ -169,7 +169,7 @@ The following is a visualization of the architecture:
 
 ![alt text][image1]
 
-####3. Creation of the Training Set & Training Process
+#### 3. Creation of the Training Set & Training Process
 
 To capture good driving dataset, I first analyzed the recorded data by visualization.  
 Here is the visualization of the steering, throttle, break, and speed (right):
